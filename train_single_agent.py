@@ -1,4 +1,3 @@
-
 import os
 import argparse
 import torch
@@ -9,13 +8,13 @@ from data_collection_config import args_ant_semicircle_sparse, \
     args_cheetah_vel, args_point_robot_sparse, args_gridworld
 
 
-def main():
+def main(args_list: list = []):
     parser = argparse.ArgumentParser()
     # parser.add_argument('--env-type', default='gridworld')
-    # parser.add_argument('--env-type', default='point_robot_sparse')
+    parser.add_argument('--env-type', default='point_robot_sparse')
     # parser.add_argument('--env-type', default='cheetah_vel')
-    parser.add_argument('--env-type', default='ant_semicircle_sparse')
-    args, rest_args = parser.parse_known_args()
+    # parser.add_argument('--env-type', default='ant_semicircle_sparse')
+    args, rest_args = parser.parse_known_args(args_list)
     env = args.env_type
 
     # --- GridWorld ---
@@ -41,5 +40,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-
+    for i in range(122, 153):
+        main(['--seed', f'{i}'])

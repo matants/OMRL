@@ -494,7 +494,7 @@ class MetaLearner:
                                                  self._n_env_steps_total)
                 self.tb_logger.writer.add_scalar('rl_losses/policy_loss', train_stats['policy_loss'],
                                                  self._n_env_steps_total)
-                self.tb_logger.writer.add_scalar('rl_losses/alpha_loss', train_stats['alpha_loss'],
+                self.tb_logger.writer.add_scalar('rl_losses/alpha_loss', train_stats['alpha_entropy_loss'],
                                                  self._n_env_steps_total)
 
             # VAE losses
@@ -508,7 +508,7 @@ class MetaLearner:
                                                  self._n_env_steps_total)
             if self.vae.state_decoder is not None:
                 self.tb_logger.writer.add_scalar('vae_losses/state_rec_loss',
-                                                 train_stats['states_loss'],
+                                                 train_stats['state_loss'],
                                                  self._n_env_steps_total)
             if self.vae.task_decoder is not None:
                 self.tb_logger.writer.add_scalar('vae_losses/task_rec_loss',

@@ -25,8 +25,8 @@ def get_args(rest_args):
     parser.add_argument('--rl-updates-per-iter', type=int, default=1000, help='number of RL steps per iteration')
     parser.add_argument('--batch-size', type=int, default=256, help='number of transitions in RL batch (per task)')
 
-    parser.add_argument('--dqn-layers', nargs='+', default=[128, 128])
-    parser.add_argument('--policy-layers', nargs='+', default=[128, 128])
+    parser.add_argument('--dqn-layers', type=int, nargs='+', default=[128, 128])
+    parser.add_argument('--policy-layers', type=int, nargs='+', default=[128, 128])
 
     parser.add_argument('--actor-lr', type=float, default=0.0003, help='learning rate for actor (default: 3e-4)')
     parser.add_argument('--critic-lr', type=float, default=0.0003, help='learning rate for critic (default: 3e-4)')

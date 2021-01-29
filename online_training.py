@@ -9,12 +9,12 @@ from online_config import args_gridworld, args_point_robot, args_point_robot_spa
     args_cheetah_vel, args_ant_semicircle, args_ant_semicircle_sparse
 
 
-def main():
+def main(args_list: list = []):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env-type', default='cheetah_vel')
-    # parser.add_argument('--env-type', default='point_robot_sparse')
+    # parser.add_argument('--env-type', default='cheetah_vel')
+    parser.add_argument('--env-type', default='point_robot_sparse')
     # parser.add_argument('--env-type', default='gridworld')
-    args, rest_args = parser.parse_known_args()
+    args, rest_args = parser.parse_known_args(args_list)
     env = args.env_type
 
     # --- GridWorld ---
@@ -58,4 +58,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    for i in range(73, 73 + 5):
+        main(['--seed', f'{i}',
+              '--batch-size', str(256),
+              '--dqn-layers', str(64), str(32),
+              '--policy-layers', str(64), str(32),
+              '--aggregator-hidden-size', str(64),
+              '--reward-decoder-layers', str(32), str(16),
+              ])

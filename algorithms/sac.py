@@ -34,9 +34,9 @@ class SAC(nn.Module):
 
         self.gamma = gamma
         self.tau = tau
-        self.use_cql = use_cql    # Conservative Q-Learning loss
-        self.alpha_cql = alpha_cql    # Conservative Q-Learning weight parameter
-        self.automatic_entropy_tuning = automatic_entropy_tuning    # Wasn't tested
+        self.use_cql = use_cql  # Conservative Q-Learning loss
+        self.alpha_cql = alpha_cql  # Conservative Q-Learning weight parameter
+        self.automatic_entropy_tuning = automatic_entropy_tuning  # Wasn't tested
         self.clip_grad_value = clip_grad_value
 
         # q networks - use two network to mitigate positive bias
@@ -106,12 +106,6 @@ class SAC(nn.Module):
                                    self.estimate_log_sum_exp_q(self.qf2, obs, N=10, action_space=kwargs['action_space'])
                                    - q2_pred)
 
-        # computation of actor loss
-        new_action, _, _, log_prob = self.act(obs, return_log_prob=True)
-        min_q_new_actions = self._min_q(obs, new_action)
-
-        policy_loss = ((self.alpha_entropy * log_prob) - min_q_new_actions).mean()
-
         # update q networks
         self.qf1_optim.zero_grad()
         self.qf2_optim.zero_grad()
@@ -124,6 +118,12 @@ class SAC(nn.Module):
         self.qf2_optim.step()
         # soft update
         self.soft_target_update()
+
+        # computation of actor loss
+        new_action, _, _, log_prob = self.act(obs, return_log_prob=True)
+        min_q_new_actions = self._min_q(obs, new_action)
+
+        policy_loss = ((self.alpha_entropy * log_prob) - min_q_new_actions).mean()
 
         # update policy network
         self.policy_optim.zero_grad()
@@ -209,6 +209,3 @@ class SAC(nn.Module):
     #         self.policy.load_state_dict(torch.load(actor_path))
     #     if critic_path is not None:
     #         self.critic.load_state_dict(torch.load(critic_path))
-
-
-

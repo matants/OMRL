@@ -42,8 +42,8 @@ def get_args(rest_args):
     # --- POLICY ---
 
     # network
-    parser.add_argument('--dqn-layers', nargs='+', default=[128, 128])
-    parser.add_argument('--policy-layers', nargs='+', default=[128, 128])
+    parser.add_argument('--dqn-layers', type=int, nargs='+', default=[128, 128])
+    parser.add_argument('--policy-layers', type=int, nargs='+', default=[128, 128])
 
     # algo
     parser.add_argument('--policy', type=str, default='sac', help='choose: dqn, ddqn, sac')
@@ -56,7 +56,8 @@ def get_args(rest_args):
     parser.add_argument('--alpha-lr', type=float, default=None,
                         help='learning rate for entropy coeff, if automatic tuning is True (default: 3e-4)')
     parser.add_argument('--gamma', type=float, default=0.9, help='discount factor for rewards (default: 0.99)')
-    parser.add_argument('--soft-target-tau', type=float, default=0.005, help='soft target network update (default: 5e-3)')
+    parser.add_argument('--soft-target-tau', type=float, default=0.005,
+                        help='soft target network update (default: 5e-3)')
 
     parser.add_argument('--switch-to-belief-reward', type=int, default=None,
                         help='when to switch from R to R+; None is to not switch')
@@ -119,7 +120,7 @@ def get_args(rest_args):
     # --- OTHERS ---
 
     # logging, saving, evaluation
-    parser.add_argument('--log-interval', type=int, default=40,
+    parser.add_argument('--log-interval', type=int, default=20,
                         help='log interval, one log per n iterations (default: 20)')
     parser.add_argument('--save-interval', type=int, default=100,
                         help='save models interval, every # iterations (default: 50)')
@@ -128,7 +129,7 @@ def get_args(rest_args):
     parser.add_argument('--agent-log-dir', default='tmp/gym/', help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument('--results-log-dir', default=None, help='directory to save agent logs (default: ./data)')
 
-    parser.add_argument('--log-tensorboard', type=boolean_argument, default=False, help='whether to use tb logger')
+    parser.add_argument('--log-tensorboard', type=boolean_argument, default=True, help='whether to use tb logger')
 
     # general settings
     parser.add_argument('--seed', type=int, default=73, help='random seed (default: 73)')
