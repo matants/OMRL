@@ -137,6 +137,13 @@ def get_args(rest_args):
 
     # gpu settings
     parser.add_argument('--use-gpu', type=boolean_argument, default=True, help='whether to use gpu')
+
+    # MER And Reptile
+    parser.add_argument('--mer-gamma', type=float, default=0.3, help='weight of reptile update')
+    parser.add_argument('--mer-s', type=int, default=10, help='number of times to train only from last collected rollout')
+    parser.add_argument('--reservoir-memory', type=boolean_argument, default=False,
+                        help='whether to use reservoir replay memory or normal')
+
     args = parser.parse_args(rest_args)
 
     args.cuda = torch.cuda.is_available()
