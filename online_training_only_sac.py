@@ -4,7 +4,7 @@ import torch
 import argparse
 
 from torchkit.pytorch_utils import set_gpu_mode
-from metalearner import MetaLearner
+from metalearner_sac import MetaLearnerOnlySAC
 from online_config import args_gridworld, args_point_robot, args_point_robot_sparse, \
     args_cheetah_vel, args_ant_semicircle, args_ant_semicircle_sparse
 
@@ -52,7 +52,7 @@ def main(args_list: list = []):
     set_gpu_mode(torch.cuda.is_available() and args.use_gpu)
 
     # start training
-    learner = MetaLearner(args)
+    learner = MetaLearnerOnlySAC(args)
 
     learner.train()
 
@@ -65,5 +65,5 @@ if __name__ == '__main__':
               '--policy-layers', str(64), str(32),
               '--aggregator-hidden-size', str(64),
               '--reward-decoder-layers', str(32), str(16),
-              '--output-file-prefix', 'sac',
+              '--output-file-prefix', 'only_sac',
               ])
