@@ -5,6 +5,7 @@ import argparse
 
 from torchkit.pytorch_utils import set_gpu_mode
 from metalearner_sac import MetaLearnerOnlySAC
+from metalearner_sac_mer import MetaLearnerSACMER
 from online_config import args_gridworld, args_point_robot, args_point_robot_sparse, \
     args_cheetah_vel, args_ant_semicircle, args_ant_semicircle_sparse
 
@@ -52,18 +53,33 @@ def main(args_list: list = []):
     set_gpu_mode(torch.cuda.is_available() and args.use_gpu)
 
     # start training
-    learner = MetaLearnerOnlySAC(args)
+    if args.output_file_prefix == 'only_sac':
+        learner = MetaLearnerOnlySAC(args)
+    elif args.output_file_prefix == 'sacmer':
+        learner = MetaLearnerSACMER(args)
+    else:
+        raise NotImplementedError
 
     learner.train()
 
 
 if __name__ == '__main__':
-    for i in range(73, 73 + 5):
+    # for i in range(73, 73 + 1):
+    #     main(['--seed', f'{i}',
+    #           '--batch-size', str(256),
+    #           '--dqn-layers', str(64), str(32),
+    #           '--policy-layers', str(64), str(32),
+    #           '--aggregator-hidden-size', str(64),
+    #           '--reward-decoder-layers', str(32), str(16),
+    #           '--output-file-prefix', 'only_sac',
+    #           ])
+
+    for i in range(73, 73 + 2):
         main(['--seed', f'{i}',
               '--batch-size', str(256),
               '--dqn-layers', str(64), str(32),
               '--policy-layers', str(64), str(32),
               '--aggregator-hidden-size', str(64),
               '--reward-decoder-layers', str(32), str(16),
-              '--output-file-prefix', 'only_sac',
+              '--output-file-prefix', 'sacmer',
               ])

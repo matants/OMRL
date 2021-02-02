@@ -82,7 +82,8 @@ class MetaLearnerSACMER:
 
     def initialize_current_experience_storage(self):
         self.current_experience_storage = MultiTaskPolicyStorage(
-            max_replay_buffer_size=int(self.args.policy_buffer_size),
+            max_replay_buffer_size=int(
+                self.args.num_tasks_sample * self.args.num_rollouts_per_iter * self.args.max_trajectory_len),
             obs_dim=self._get_augmented_obs_dim(),
             action_space=self.env.action_space,
             tasks=self.train_tasks,
@@ -178,7 +179,8 @@ class MetaLearnerSACMER:
 
             # collect data from subset of train tasks
             tasks_to_collect = [self.train_tasks[np.random.randint(len(self.train_tasks))] for _ in
-                                self.args.num_tasks_sample]
+                                range(self.args.num_tasks_sample)]
+            self.initialize_current_experience_storage()
             for i in range(self.args.num_tasks_sample):
                 task = tasks_to_collect[i]
                 self.task_idx = task
@@ -195,21 +197,21 @@ class MetaLearnerSACMER:
             if (iter_ + 1) % self.args.log_interval == 0:
                 self.log(iter_ + 1, train_stats)
 
-    def update(self, tasks, current_tasks_indices=[]):
+    def update(self, tasks, current_task_indices=[]):
         '''
         Meta-update
         :param tasks: list/array of task indices. perform update based on the tasks
-        :param current_tasks_indices: indices that the last rollout collected
+        :param current_task_indices: indices that the last rollout collected
         :return:
         '''
 
         # --- RL TRAINING ---
         rl_losses_agg = {}
-        prev_qf1 = copy.deepcopy(self.agent.qf1)
-        prev_qf2 = copy.deepcopy(self.agent.qf2)
-        prev_qf1_target = copy.deepcopy(self.agent.qf1_target)
-        prev_qf2_target = copy.deepcopy(self.agent.qf2_target)
-        prev_policy = copy.deepcopy(self.agent.policy)
+        prev_qf1 = copy.deepcopy(self.agent.qf1).to(ptu.device)
+        prev_qf2 = copy.deepcopy(self.agent.qf2).to(ptu.device)
+        prev_qf1_target = copy.deepcopy(self.agent.qf1_target).to(ptu.device)
+        prev_qf2_target = copy.deepcopy(self.agent.qf2_target).to(ptu.device)
+        prev_policy = copy.deepcopy(self.agent.policy).to(ptu.device)
         # prev_alpha = copy.deepcopy(self.agent.log_alpha_entropy)  # not relevant when alpha is const
         prev_nets = [prev_qf1, prev_qf2, prev_qf1_target, prev_qf2_target, prev_policy]
 
@@ -218,9 +220,9 @@ class MetaLearnerSACMER:
 
         for update in range(self.args.rl_updates_per_iter):
             # sample random RL batch
-            obs, actions, rewards, next_obs, terms = self.sample_rl_batch(tasks, self.args.batch_size,
-                                                                          is_sample_from_current_experience=(
-                                                                                      update in updates_from_current_experience))
+            obs, actions, rewards, next_obs, terms = self.sample_rl_batch(
+                tasks if update not in updates_from_current_experience else current_task_indices, self.args.batch_size,
+                is_sample_from_current_experience=(update in updates_from_current_experience))
             # flatten out task dimension
             t, b, _ = obs.size()
             obs = obs.view(t * b, -1)
@@ -475,7 +477,6 @@ class MetaLearnerSACMER:
         :return:
         '''
 
-        self.initialize_current_experience_storage()
         for rollout in range(num_rollouts):
             obs = ptu.from_numpy(self.env.reset(self.task_idx))
             obs = obs.reshape(-1, obs.shape[-1])
@@ -516,13 +517,14 @@ class MetaLearnerSACMER:
                                                reward=ptu.get_numpy(reward.squeeze(dim=0)),
                                                terminal=np.array([term], dtype=float),
                                                next_observation=ptu.get_numpy(augmented_next_obs.squeeze(dim=0)))
-                self.current_experience_storage.add_sample(task=self.task_idx,
-                                                           observation=ptu.get_numpy(augmented_obs.squeeze(dim=0)),
-                                                           action=ptu.get_numpy(action.squeeze(dim=0)),
-                                                           reward=ptu.get_numpy(reward.squeeze(dim=0)),
-                                                           terminal=np.array([term], dtype=float),
-                                                           next_observation=ptu.get_numpy(
-                                                               augmented_next_obs.squeeze(dim=0)))
+                if not random_actions:
+                    self.current_experience_storage.add_sample(task=self.task_idx,
+                                                               observation=ptu.get_numpy(augmented_obs.squeeze(dim=0)),
+                                                               action=ptu.get_numpy(action.squeeze(dim=0)),
+                                                               reward=ptu.get_numpy(reward.squeeze(dim=0)),
+                                                               terminal=np.array([term], dtype=float),
+                                                               next_observation=ptu.get_numpy(
+                                                                   augmented_next_obs.squeeze(dim=0)))
 
                 # set: obs <- next_obs
                 obs = next_obs.clone()
