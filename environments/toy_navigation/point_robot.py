@@ -18,14 +18,17 @@ class PointEnv(Env):
     def __init__(self,
                  max_episode_steps=20,
                  n_tasks=2,
+                 step_size=0.1,
                  modify_init_state_dist=True,
                  on_circle_init_state=True,
                  **kwargs):
 
         self._max_episode_steps = max_episode_steps
+        self._step_size = step_size
         self.step_count = 0
         self.modify_init_state_dist = modify_init_state_dist
         self.on_circle_init_state = on_circle_init_state
+        self.momentum_size = 0
 
         # np.random.seed(1337)
         goals = [[np.random.uniform(-1., 1.), np.random.uniform(-1., 1.)] for _ in range(n_tasks)]
@@ -34,7 +37,7 @@ class PointEnv(Env):
 
         self.reset_task(0)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(2,))
-        self.action_space = spaces.Box(low=-0.1, high=0.1, shape=(2,))
+        self.action_space = spaces.Box(low=-step_size, high=step_size, shape=(2,))
 
     def reset_task(self, idx):
         ''' reset goal AND reset the agent '''
@@ -51,6 +54,7 @@ class PointEnv(Env):
     def reset_model(self):
         # reset to a random location on the unit square
         self._state = np.random.uniform(-1., 1., size=(2,))
+        self._momentum_state = np.zeros(shape=(2,))
         return self._get_obs()
 
     def reset(self):
@@ -61,7 +65,9 @@ class PointEnv(Env):
         return np.copy(self._state)
 
     def step(self, action):
-        self._state = self._state + action
+        self._momentum_state = action + self.momentum_size * self._momentum_state
+        self._state = self._state + self._momentum_state
+
         reward = - ((self._state[0] - self._goal[0]) ** 2 + (self._state[1] - self._goal[1]) ** 2) ** 0.5
 
         # check if maximum step limit is reached
@@ -84,6 +90,9 @@ class PointEnv(Env):
     def render(self):
         print('current state:', self._state)
 
+    def set_momentum(self, momentum: float):
+        self.momentum_size = momentum
+
 
 class SparsePointEnv(PointEnv):
     '''
@@ -92,14 +101,16 @@ class SparsePointEnv(PointEnv):
      NOTE that `step()` returns the dense reward because this is used during meta-training
      the algorithm should call `sparsify_rewards()` to get the sparse rewards
      '''
+
     def __init__(self,
                  max_episode_steps=20,
                  n_tasks=2,
                  goal_radius=0.2,
+                 step_size=0.1,
                  modify_init_state_dist=True,
                  on_circle_init_state=True,
                  **kwargs):
-        super().__init__(max_episode_steps, n_tasks)
+        super().__init__(max_episode_steps, n_tasks, step_size=step_size)
         self.goal_radius = goal_radius
         self.modify_init_state_dist = modify_init_state_dist
         self.on_circle_init_state = on_circle_init_state
@@ -124,9 +135,10 @@ class SparsePointEnv(PointEnv):
 
     def reset_model(self):
         self.step_count = 0
+        self._momentum_state = np.zeros(shape=(2,))
         if self.modify_init_state_dist:
             self._state = np.array([np.random.uniform(-1.5, 1.5), np.random.uniform(-0.5, 1.5)])
-            if not self.on_circle_init_state:   # make sure initial state is not on semi-circle
+            if not self.on_circle_init_state:  # make sure initial state is not on semi-circle
                 while 1 - self.goal_radius <= np.linalg.norm(self._state) <= 1 + self.goal_radius:
                     self._state = np.array([np.random.uniform(-1.5, 1.5), np.random.uniform(-0.5, 1.5)])
         else:
@@ -171,8 +183,7 @@ class SparsePointEnv(PointEnv):
         ax.add_artist(circle)
 
     def plot_behavior(self, observations, plot_env=True, **kwargs):
-        if plot_env:    # whether to plot circle and goal pos..(maybe already exists)
+        if plot_env:  # whether to plot circle and goal pos..(maybe already exists)
             self.plot_env()
         # visualise behaviour, current position, goal
         plt.plot(observations[:, 0], observations[:, 1], **kwargs)
-

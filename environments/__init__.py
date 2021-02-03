@@ -56,15 +56,11 @@ register(
 register(
     'PointRobot-v0',
     entry_point='environments.toy_navigation.point_robot:PointEnv',
-    kwargs={'max_episode_steps': 60, 'n_tasks': 2},
+    kwargs={'max_episode_steps': 60, 'n_tasks': 2, 'step_size': 0.1},
 )
-
 
 register(
     'PointRobotSparse-v0',
     entry_point='environments.toy_navigation.point_robot:SparsePointEnv',
-    kwargs={'max_episode_steps': 60, 'n_tasks': 2, 'goal_radius': 0.2},
+    kwargs={'max_episode_steps': 60, 'n_tasks': 2, 'step_size': 0.1, 'goal_radius': 0.2},
 )
-
-
-
