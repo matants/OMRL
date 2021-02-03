@@ -140,9 +140,15 @@ def get_args(rest_args):
 
     # MER And Reptile
     parser.add_argument('--mer-gamma', type=float, default=0.3, help='weight of reptile update')
-    parser.add_argument('--mer-s', type=int, default=10, help='number of times to train only from last collected rollout')
+    parser.add_argument('--mer-s', type=int, default=10,
+                        help='number of times to train only from last collected rollout')
     parser.add_argument('--reservoir-memory', type=boolean_argument, default=False,
                         help='whether to use reservoir replay memory or normal')
+
+    # Momentum
+    parser.add_argument('--initial-momentum', type=float, default=0.1)
+    parser.add_argument('--num-iters-per-momentum-update', type=int, default=400)
+    parser.add_argument('--momentum-update-size', type=float, default=0.1)
 
     args = parser.parse_args(rest_args)
 

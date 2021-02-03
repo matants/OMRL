@@ -28,7 +28,7 @@ class PointEnv(Env):
         self.step_count = 0
         self.modify_init_state_dist = modify_init_state_dist
         self.on_circle_init_state = on_circle_init_state
-        self.momentum_size = 0
+        self.momentum_size = 0.
 
         # np.random.seed(1337)
         goals = [[np.random.uniform(-1., 1.), np.random.uniform(-1., 1.)] for _ in range(n_tasks)]
