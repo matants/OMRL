@@ -621,14 +621,17 @@ class MetaLearnerMomentum:
                                                      sum([param_list[i].grad.mean() for i in range(len(param_list))]),
                                                      self._n_env_steps_total)
 
+            # log momentum
+            self.tb_logger.writer.add_scalar('momentum', self.momentum, self._n_env_steps_total)
+
         # output to user
         # print("Iteration -- {:3d}, Num. RL updates -- {:6d}, Elapsed time {:5d}[s]".
         #       format(iteration,
         #              self._n_rl_update_steps_total,
         #              int(time.time() - self._start_time)))
-        print("Iteration -- {}, Success rate train -- {:.3f}, Success rate eval.-- {:.3f}, "
+        print("Iteration -- {}, Momentum -- {:.1f}, Success rate train -- {:.3f}, Success rate eval.-- {:.3f}, "
               "Avg. return train -- {:.3f}, Avg. return eval. -- {:.3f}, Elapsed time {:5d}[s]"
-              .format(iteration, np.mean(success_rate_train),
+              .format(iteration, self.momentum, np.mean(success_rate_train),
                       np.mean(success_rate_eval), np.mean(np.sum(returns_train, axis=-1)),
                       np.mean(np.sum(returns_eval, axis=-1)),
                       int(time.time() - self._start_time)))
