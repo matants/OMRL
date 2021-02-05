@@ -623,6 +623,8 @@ class MetaLearnerMomentum:
 
             # log momentum
             self.tb_logger.writer.add_scalar('momentum', self.momentum, self._n_env_steps_total)
+            #log iteration
+            self.tb_logger.writer.add_scalar('iteration', iteration, self._n_env_steps_total)
 
         # output to user
         # print("Iteration -- {:3d}, Num. RL updates -- {:6d}, Elapsed time {:5d}[s]".

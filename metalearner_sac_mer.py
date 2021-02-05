@@ -453,6 +453,9 @@ class MetaLearnerSACMER:
                                                      sum([param_list[i].grad.mean() for i in range(len(param_list))]),
                                                      self._n_env_steps_total)
 
+            #log iteration
+            self.tb_logger.writer.add_scalar('iteration', iteration, self._n_env_steps_total)
+
         # output to user
         # print("Iteration -- {:3d}, Num. RL updates -- {:6d}, Elapsed time {:5d}[s]".
         #       format(iteration,
