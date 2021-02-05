@@ -5,6 +5,7 @@ import argparse
 
 from torchkit.pytorch_utils import set_gpu_mode
 from metalearner_momentum import MetaLearnerMomentum
+from metalearner_momentum_mer import MetaLearnerMomentumMer
 from online_config import args_gridworld, args_point_robot, args_point_robot_sparse, \
     args_cheetah_vel, args_ant_semicircle, args_ant_semicircle_sparse
 
@@ -52,7 +53,12 @@ def main(args_list: list = []):
     set_gpu_mode(torch.cuda.is_available() and args.use_gpu)
 
     # start training
-    learner = MetaLearnerMomentum(args)
+    if args.output_file_prefix == 'omrl_momentum':
+        learner = MetaLearnerMomentum(args)
+    elif args.output_file_prefix == 'omrl_momentum_mer':
+        learner = MetaLearnerMomentumMer(args)
+    else:
+        raise NotImplementedError
 
     learner.train()
 
@@ -65,5 +71,5 @@ if __name__ == '__main__':
               '--policy-layers', str(64), str(32),
               '--aggregator-hidden-size', str(64),
               '--reward-decoder-layers', str(32), str(16),
-              '--output-file-prefix', 'omrl_momentum',
+              '--output-file-prefix', 'omrl_momentum_mer',
               ])
