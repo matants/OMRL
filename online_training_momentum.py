@@ -65,7 +65,7 @@ def main(args_list: list = []):
 
 
 def main_proc(args):
-    p = multiprocessing.process(target=main, args=(args,))
+    p = multiprocessing.Process(target=main, args=(args,))
     p.start()
     p.join()
 
