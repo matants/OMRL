@@ -85,6 +85,8 @@ class MetaLearnerMomentumMer:
             trajectory_len=args.max_trajectory_len
         )
 
+        self.vae_storage_current_metatask = None
+
         # initialize policy
         self.initialize_policy()
         # initialize buffer for RL updates
@@ -103,11 +105,19 @@ class MetaLearnerMomentumMer:
     def initialize_current_metatask_storage(self):
         self.current_metatask_storage = MultiTaskPolicyStorage(
             max_replay_buffer_size=int(
-                self.args.num_rollouts_per_iter * self.args.max_trajectory_len * self.args.num_iters_per_momentum_update),
+                self.args.num_rollouts_per_iter * self.args.max_trajectory_len *
+                self.args.num_iters_per_momentum_update),
             obs_dim=self._get_augmented_obs_dim(),
             action_space=self.env.action_space,
             tasks=self.train_tasks,
             trajectory_len=self.args.max_trajectory_len,
+        )
+        self.vae_storage_current_metatask = MultiTaskVAEStorage(
+            max_replay_buffer_size=int(self.args.vae_buffer_size),
+            obs_dim=utl.get_dim(self.env.observation_space),
+            action_space=self.env.action_space,
+            tasks=self.train_tasks,
+            trajectory_len=self.args.max_trajectory_len
         )
 
     def initialize_policy(self):
@@ -251,15 +261,16 @@ class MetaLearnerMomentumMer:
         # prev_alpha = copy.deepcopy(self.agent.log_alpha_entropy)  # not relevant when alpha is const
         prev_nets = [prev_qf1, prev_qf2, prev_qf1_target, prev_qf2_target, prev_policy]
 
-        updates_from_current_metatask = np.random.choice(self.args.rl_updates_per_iter, self.args.mer_s,
-                                                         replace=False)
+        policy_updates_from_current_metatask = np.random.choice(self.args.rl_updates_per_iter, self.args.mer_s_policy,
+                                                                replace=False)
 
         for update in range(self.args.rl_updates_per_iter):
             # sample random RL batch
             obs, actions, rewards, next_obs, terms = self.sample_rl_batch(
-                tasks if update not in updates_from_current_metatask else tasks_already_explored_in_current_meta_task,
+                tasks if update not in policy_updates_from_current_metatask else
+                tasks_already_explored_in_current_meta_task,
                 self.args.batch_size,
-                is_sample_from_current_task=update in updates_from_current_metatask)
+                is_sample_from_current_task=update in policy_updates_from_current_metatask)
             # flatten out task dimension
             t, b, _ = obs.size()
             obs = obs.view(t * b, -1)
@@ -280,7 +291,7 @@ class MetaLearnerMomentumMer:
         # reptile update
         new_nets = [self.agent.qf1, self.agent.qf2, self.agent.qf1_target, self.agent.qf2_target, self.agent.policy]
         for new_net, prev_net in zip(new_nets, prev_nets):
-            ptu.soft_update_from_to(prev_net, new_net, self.args.mer_gamma)
+            ptu.soft_update_from_to(prev_net, new_net, self.args.mer_gamma_policy)
             new_net = prev_net
 
         # take mean
@@ -288,17 +299,53 @@ class MetaLearnerMomentumMer:
             rl_losses_agg[k] = np.mean(rl_losses_agg[k])
         self._n_rl_update_steps_total += self.args.rl_updates_per_iter
 
+        # --------------------
         # --- VAE TRAINING ---
+        # --------------------
         rew_losses, state_losses, task_losses, kl_terms, vae_losses = [], [], [], [], []
+
+        vae_updates_from_current_metatask = np.random.choice(self.args.vae_updates_per_iter, self.args.mer_s_vae,
+                                                             replace=False)
+
+        # reptile inits
+        prev_encoder = copy.deepcopy(self.vae.encoder).to(ptu.device)
+        prev_nets = [prev_encoder]
+        if self.args.decode_reward:
+            prev_reward_decoder = copy.deepcopy(self.vae.reward_decoder).to(ptu.device)
+            prev_nets.append(prev_reward_decoder)
+        if self.args.decode_state:
+            prev_state_decoder = copy.deepcopy(self.vae.state_decoder).to(ptu.device)
+            prev_nets.append(prev_state_decoder)
+        if self.args.decode_task:
+            prev_task_decoder = copy.deepcopy(self.vae.task_decoder).to(ptu.device)
+            prev_nets.append(prev_task_decoder)
+
         for update in range(self.args.vae_updates_per_iter):
             # returns mean loss terms
-            vae_loss, rew_loss, state_loss, task_loss, kl_term = self.update_vae(tasks)
+            vae_loss, rew_loss, state_loss, task_loss, kl_term = self.update_vae(
+                tasks if update not in policy_updates_from_current_metatask else
+                tasks_already_explored_in_current_meta_task,
+                is_sample_from_current_task=update in vae_updates_from_current_metatask)
 
             rew_losses.append(rew_loss.item())
             state_losses.append(state_loss.item())
             task_losses.append(task_loss.item())
             kl_terms.append(kl_term.item())
             vae_losses.append(vae_loss.item())
+
+        new_nets = [self.vae.encoder]
+        if self.args.decode_reward:
+            new_nets.append(self.vae.reward_decoder)
+        if self.args.decode_state:
+            new_nets.append(self.vae.state_decoder)
+        if self.args.decode_task:
+            new_nets.append(self.vae.task_decoder)
+
+        for new_net, prev_net in zip(new_nets, prev_nets):
+            ptu.soft_update_from_to(prev_net, new_net, self.args.mer_gamma_vae)
+            new_net = prev_net
+
+
 
         # statistics
         self._n_vae_update_steps_total += self.args.vae_updates_per_iter
@@ -682,9 +729,8 @@ class MetaLearnerMomentumMer:
             # log momentum
             self.tb_logger.writer.add_scalar('momentum', self.momentum, self._n_env_steps_total)
 
-            #log iteration
+            # log iteration
             self.tb_logger.writer.add_scalar('iteration', iteration, self._n_env_steps_total)
-
 
         # output to user
         # print("Iteration -- {:3d}, Num. RL updates -- {:6d}, Elapsed time {:5d}[s]".
@@ -698,28 +744,41 @@ class MetaLearnerMomentumMer:
                       np.mean(np.sum(returns_eval, axis=-1)),
                       int(time.time() - self._start_time)))
 
-    def update_vae(self, tasks):
+    def update_vae(self, tasks, is_sample_from_current_task: bool = False):
         """
         Compute losses, update parameters and return the VAE losses
         """
 
         # get a mini-batch of episodes
         obs, actions, rewards, next_obs, terms = self.sample_vae_batch(tasks,
-                                                                       self.args.vae_batch_num_rollouts_per_task)
+                                                                       self.args.vae_batch_num_rollouts_per_task,
+                                                                       is_sample_from_current_task)
 
         episode_len, num_episodes, _ = obs.shape
 
         # get time-steps for ELBO computation
         if self.args.vae_batch_num_elbo_terms is not None:
-            elbo_timesteps = np.stack(
-                [np.random.choice(range(0, self.vae_storage.trajectory_len + 1),
-                                  self.args.vae_batch_num_elbo_terms, replace=False)
-                 for _ in range(num_episodes)])
+            if is_sample_from_current_task:
+                elbo_timesteps = np.stack(
+                    [np.random.choice(range(0, self.vae_storage_current_metatask.trajectory_len + 1),
+                                      self.args.vae_batch_num_elbo_terms, replace=False)
+                     for _ in range(num_episodes)])
+            else:
+                elbo_timesteps = np.stack(
+                    [np.random.choice(range(0, self.vae_storage.trajectory_len + 1),
+                                      self.args.vae_batch_num_elbo_terms, replace=False)
+                     for _ in range(num_episodes)])
         else:
-            elbo_timesteps = np.repeat(np.arange(0, self.vae_storage.trajectory_len + 1).reshape(1, -1),
-                                       num_episodes, axis=0)
+            if is_sample_from_current_task:
+                elbo_timesteps = np.repeat(
+                    np.arange(0, self.vae_storage_current_metatask.trajectory_len + 1).reshape(1, -1),
+                    num_episodes, axis=0)
+            else:
+                elbo_timesteps = np.repeat(np.arange(0, self.vae_storage.trajectory_len + 1).reshape(1, -1),
+                                           num_episodes, axis=0)
 
-        # pass through encoder (outputs will be: (max_traj_len+1) x number of rollouts x latent_dim -- includes the prior!)
+        # pass through encoder (outputs will be: (max_traj_len+1) x number of rollouts x latent_dim -- includes the
+        # prior!)
         _, latent_mean, latent_logvar, _ = self.vae.encoder(actions=actions,
                                                             states=next_obs,
                                                             rewards=rewards,
@@ -921,6 +980,12 @@ class MetaLearnerMomentumMer:
                                             reward=ptu.get_numpy(reward.squeeze(dim=0)),
                                             terminal=ptu.get_numpy(done.squeeze(dim=0)),
                                             next_observation=ptu.get_numpy(next_obs.squeeze(dim=0)))
+                self.vae_storage_current_metatask.add_sample(task=self.task_idx,
+                                                             observation=ptu.get_numpy(obs.squeeze(dim=0)),
+                                                             action=ptu.get_numpy(action.squeeze(dim=0)),
+                                                             reward=ptu.get_numpy(reward.squeeze(dim=0)),
+                                                             terminal=ptu.get_numpy(done.squeeze(dim=0)),
+                                                             next_observation=ptu.get_numpy(next_obs.squeeze(dim=0)))
 
                 # add data to policy buffer - (s+, a, r, s'+, term)
                 term = self.env.unwrapped.is_goal_state() if "is_goal_state" in dir(self.env.unwrapped) else False
@@ -935,7 +1000,8 @@ class MetaLearnerMomentumMer:
                 self.current_metatask_storage.add_sample(task=self.task_idx,
                                                          observation=ptu.get_numpy(augmented_obs.squeeze(dim=0)),
                                                          action=ptu.get_numpy(action.squeeze(dim=0)),
-                                                         reward=belief_reward if self.args.belief_reward else ptu.get_numpy(
+                                                         reward=belief_reward if self.args.belief_reward else
+                                                         ptu.get_numpy(
                                                              reward.squeeze(dim=0)),
                                                          terminal=np.array([term], dtype=float),
                                                          next_observation=ptu.get_numpy(
@@ -1030,11 +1096,15 @@ class MetaLearnerMomentumMer:
         unpacked = [torch.cat(x, dim=0) for x in unpacked]
         return unpacked
 
-    def sample_vae_batch(self, tasks, rollouts_per_task=1):
+    def sample_vae_batch(self, tasks, rollouts_per_task=1, is_sample_from_current_task: bool = False):
         ''' sample batch of episodes for vae training from a list/array of tasks '''
 
-        batches = [ptu.np_to_pytorch_batch(
-            self.vae_storage.random_episodes(task, rollouts_per_task)) for task in tasks]
+        if is_sample_from_current_task:
+            batches = [ptu.np_to_pytorch_batch(
+                self.vae_storage_current_metatask.random_episodes(task, rollouts_per_task)) for task in tasks]
+        else:
+            batches = [ptu.np_to_pytorch_batch(
+                self.vae_storage.random_episodes(task, rollouts_per_task)) for task in tasks]
         unpacked = [utl.unpack_batch(batch) for batch in batches]
         # group elements together
         unpacked = [[x[i].reshape(rollouts_per_task, -1, x[i].shape[-1]).transpose(0, 1).unsqueeze(dim=0)

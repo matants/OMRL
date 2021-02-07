@@ -139,8 +139,11 @@ def get_args(rest_args):
     parser.add_argument('--use-gpu', type=boolean_argument, default=True, help='whether to use gpu')
 
     # MER And Reptile
-    parser.add_argument('--mer-gamma', type=float, default=0.5, help='weight of reptile update')
-    parser.add_argument('--mer-s', type=int, default=10,
+    parser.add_argument('--mer-gamma-policy', type=float, default=0.5, help='weight of reptile update')
+    parser.add_argument('--mer-gamma-vae', type=float, default=0.5, help='weight of reptile update')
+    parser.add_argument('--mer-s-policy', type=int, default=50,
+                        help='number of times to train only from last collected rollout')
+    parser.add_argument('--mer-s-vae', type=int, default=5,
                         help='number of times to train only from last collected rollout')
     parser.add_argument('--reservoir-memory', type=boolean_argument, default=False,
                         help='whether to use reservoir replay memory or normal')
