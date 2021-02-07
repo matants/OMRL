@@ -2,6 +2,7 @@ import os
 import glob
 import torch
 import argparse
+import multiprocessing
 
 from torchkit.pytorch_utils import set_gpu_mode
 from metalearner_momentum import MetaLearnerMomentum
@@ -63,13 +64,19 @@ def main(args_list: list = []):
     learner.train()
 
 
+def main_proc(args):
+    p = multiprocessing.process(target=main, args=(args,))
+    p.start()
+    p.join()
+
+
 if __name__ == '__main__':
     for i in range(73, 73 + 5):
-        main(['--seed', f'{i}',
-              '--batch-size', str(256),
-              '--dqn-layers', str(64), str(32),
-              '--policy-layers', str(64), str(32),
-              '--aggregator-hidden-size', str(64),
-              '--reward-decoder-layers', str(32), str(16),
-              '--output-file-prefix', 'omrl_momentum_mer',
-              ])
+        main_proc(['--seed', f'{i}',
+                   '--batch-size', str(256),
+                   '--dqn-layers', str(64), str(32),
+                   '--policy-layers', str(64), str(32),
+                   '--aggregator-hidden-size', str(64),
+                   '--reward-decoder-layers', str(32), str(16),
+                   '--output-file-prefix', 'omrl_momentum_mer',
+                   ])
