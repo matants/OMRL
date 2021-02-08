@@ -323,7 +323,7 @@ class MetaLearnerMomentumMer:
         for update in range(self.args.vae_updates_per_iter):
             # returns mean loss terms
             vae_loss, rew_loss, state_loss, task_loss, kl_term = self.update_vae(
-                tasks if update not in policy_updates_from_current_metatask else
+                tasks if update not in vae_updates_from_current_metatask else
                 tasks_already_explored_in_current_meta_task,
                 is_sample_from_current_task=update in vae_updates_from_current_metatask)
 
