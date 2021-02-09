@@ -243,8 +243,9 @@ class MetaLearnerSACMER:
         # reptile update
         new_nets = [self.agent.qf1, self.agent.qf2, self.agent.qf1_target, self.agent.qf2_target, self.agent.policy]
         for new_net, prev_net in zip(new_nets, prev_nets):
-            ptu.soft_update_from_to(prev_net, new_net, self.args.mer_gamma)
-            new_net = prev_net
+            ptu.soft_update_from_to(new_net, prev_net, self.args.mer_gamma_policy)
+            ptu.copy_model_params_from_to(prev_net, new_net)
+
 
         # take mean
         for k in rl_losses_agg:
