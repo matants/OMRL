@@ -736,7 +736,7 @@ class MetaLearnerMomentumMer:
         #       format(iteration,
         #              self._n_rl_update_steps_total,
         #              int(time.time() - self._start_time)))
-        print("Iteration -- {}, Momentum -- {:.1f}, Success rate train -- {:.3f}, Success rate eval.-- {:.3f}, "
+        print("Iteration -- {}, Momentum -- {:.2f}, Success rate train -- {:.3f}, Success rate eval.-- {:.3f}, "
               "Avg. return train -- {:.3f}, Avg. return eval. -- {:.3f}, Elapsed time {:5d}[s]"
               .format(iteration, self.momentum, np.mean(success_rate_train),
                       np.mean(success_rate_eval), np.mean(np.sum(returns_train, axis=-1)),
