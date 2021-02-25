@@ -20,7 +20,6 @@ cols_dark = sns.color_palette("dark", 10)
 
 
 def moving_average(array, num_points, only_past=False):
-
     if not only_past:
         ma = []
         for i in range(num_points, array.shape[0]):
@@ -28,8 +27,8 @@ def moving_average(array, num_points, only_past=False):
         ma = np.array(ma)
     else:
         ma = []
-        for i in range(1, array.shape[0]+1):
-            ma.append(np.mean(array[max(0, i-num_points):i]))
+        for i in range(1, array.shape[0] + 1):
+            ma.append(np.mean(array[max(0, i - num_points):i]))
         ma = np.array(ma)
 
     return ma
@@ -53,7 +52,6 @@ def get_array_from_event(event_path, tag, m):
 
 
 def get_array_from_event_multi_episode(event_path, tag, rollout_indices, m):
-
     num_rollouts = len(rollout_indices)
     r1 = [[] for _ in range(num_rollouts)]
     steps = []
@@ -120,7 +118,7 @@ def plot_tb_results(env_name, exp_name, tag, m, **kwargs):
 
     results_directory = os.path.join(os.getcwd(), '../logs/{}'.format(env_name))
     exp_ids = [folder for folder in os.listdir(results_directory) if
-                   folder.startswith(exp_name + '__')]
+               folder.startswith(exp_name + '__')]
 
     arrays = []
     for exp_id in exp_ids:
@@ -146,6 +144,55 @@ def plot_tb_results(env_name, exp_name, tag, m, **kwargs):
                         color=kwargs['color'])
 
 
+def plot_results_from_dir(exp_dir, tag, m, **kwargs):
+    tf_event = [event for event in os.listdir(exp_dir) if event.startswith('event')][0]
+
+    arr, steps = get_array_from_event(os.path.join(exp_dir, tf_event), tag=tag, m=m)
+
+    plt.plot(steps, arr)
+    plt.show()
+
+
+def get_eval_results_from_dir(dir, m=10):
+    tf_event = [event for event in os.listdir(dir) if event.startswith('event')][0]
+
+    arr, steps = get_array_from_event(os.path.join(dir, tf_event), tag='returns_multi_episode/sum_eval', m=m)
+
+    return arr, steps
+
+
+def get_times_of_momentum_change(dir):
+    tf_event = [event for event in os.listdir(dir) if event.startswith('event')][0]
+    momentum_arr, steps = get_array_from_event(os.path.join(dir, tf_event), tag='momentum', m=1)
+    steps_of_momentum_change = []
+    momentum_before = momentum_arr[0]
+    for i, step in enumerate(steps):
+        if momentum_arr[i] != momentum_before:
+            steps_of_momentum_change.append(step)
+            momentum_before = momentum_arr[i]
+    return steps_of_momentum_change
+
+
+def plot_results_from_dirs_together(dir_list=[], labels_list=[], m=10, is_changing_momentum=False):
+    assert len(dir_list) == len(labels_list), "lengths don't match"
+    arr_list = []
+    steps_list = []
+    for dir in dir_list:
+        arr, steps = get_eval_results_from_dir(dir, m)
+        arr_list.append(arr)
+        steps_list.append(steps)
+        plt.plot(steps, arr)
+    plt.legend(labels_list)
+    plt.xlabel("Training steps")
+    plt.ylabel("Evaluation reward")
+    plt.grid()
+    if is_changing_momentum:
+        steps_momentum_change = get_times_of_momentum_change(dir_list[0])
+        for step in steps_momentum_change:
+            plt.axvline(step, linestyle='--', color='black')
+    plt.show()
+
+
 def compare(env_names, exp_names, tags, m, ylabel, save_path=None, **kwargs):
     for i in range(len(env_names)):
         plot_tb_results(env_names[i], exp_names[i], tags[i], m,
@@ -166,7 +213,6 @@ def compare(env_names, exp_names, tags, m, ylabel, save_path=None, **kwargs):
     if 'truncate_at' in kwargs:
         plt.xlim([0., kwargs['truncate_at']])
 
-
     # plt.legend(fontsize=18, loc='lower right', prop={'size': 16})
     plt.legend(fontsize=18, loc='upper right', prop={'size': 16})
     plt.tight_layout()
@@ -180,9 +226,14 @@ def compare(env_names, exp_names, tags, m, ylabel, save_path=None, **kwargs):
 
 
 if __name__ == '__main__':
-    compare(env_names=['PointRobotSparse-v0', 'SparsePointEnv-v0'], exp_names=['sac', 'ppo_latest'],
-            tags=['returns_multi_episode/sum_eval', 'return_avg_per_frame/episode_'], m=10,
-            ylabel='Average return', multi_episode=[False, True],
-            rollout_indices=[[], [1, 2]], labels=['Ours', 'VariBAD'],
-            colors=[cols_dark[0], cols_dark[1]])
-
+    dirnames = [
+        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\sac__73__29_01_16_48_03",
+        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\only_sac__73__31_01_23_09_04",
+        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\sacmer__73__02_02_16_19_34"
+    ]
+    labels = [
+        "OMRL",
+        "SAC (Policy only, no VAE)",
+        "SAC+MER (Policy only, no VAE)"
+    ]
+    plot_results_from_dirs_together(dirnames, labels)
