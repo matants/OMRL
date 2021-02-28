@@ -153,7 +153,7 @@ def plot_results_from_dir(exp_dir, tag, m, **kwargs):
     plt.show()
 
 
-def get_eval_results_from_dir(dir, m=10):
+def get_eval_results_from_dir(dir, m=1):
     tf_event = [event for event in os.listdir(dir) if event.startswith('event')][0]
 
     arr, steps = get_array_from_event(os.path.join(dir, tf_event), tag='returns_multi_episode/sum_eval', m=m)
@@ -173,7 +173,7 @@ def get_times_of_momentum_change(dir):
     return steps_of_momentum_change
 
 
-def plot_results_from_dirs_together(dir_list=[], labels_list=[], m=10, is_changing_momentum=False):
+def plot_results_from_dirs_together(dir_list=[], labels_list=[], m=1, is_changing_momentum=False):
     assert len(dir_list) == len(labels_list), "lengths don't match"
     arr_list = []
     steps_list = []
@@ -226,14 +226,66 @@ def compare(env_names, exp_names, tags, m, ylabel, save_path=None, **kwargs):
 
 
 if __name__ == '__main__':
+    # # First try - compare with and without vae
+    # dirnames = [
+    #     "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\sac__73__29_01_16_48_03",
+    #     "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\only_sac__73__31_01_23_09_04",
+    #     "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\sacmer__73__02_02_16_19_34"
+    # ]
+    # labels = [
+    #     "OMRL",
+    #     "SAC (Policy only, no VAE)",
+    #     "SAC+MER (Policy only, no VAE)"
+    # ]
+    # plot_results_from_dirs_together(dirnames, labels)
+    #
+    # # OMRL only - sequential learning comparison
+    # dirnames = [
+    #     "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0
+    #     \\omrl_momentum__73__03_02_13_41_16_momentum_from_0.1",
+    #     "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0
+    #     \\omrl_momentum__73__16_02_22_42_09_momentum_from_0.82",
+    #     "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0
+    #     \\omrl_momentum__73__13_02_17_24_18_momentum_1_const"
+    # ]
+    # labels = [
+    #     "momentum going from 0.1 to 1",
+    #     "momentum going from 0.82 to 1",
+    #     "momentum = 1 (const)",
+    # ]
+    #
+    # plot_results_from_dirs_together(dirnames, labels, is_changing_momentum=True)
+    #
+    # # Momentum from 0.82 comparison
+    # dirnames = [
+    #     "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0
+    #     \\omrl_momentum__73__16_02_22_42_09_momentum_from_0.82",
+    #     "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0
+    #     \\omrl_momentum_mer__73__18_02_09_25_13_momentum_from_0.82_gamma_0.3both_s_500policy_15vae"
+    # ]
+    # labels = [
+    #     "OMRL",
+    #     "OMRL + MER",
+    # ]
+    #
+    # plot_results_from_dirs_together(dirnames, labels, is_changing_momentum=True)
+
+    # Momentum from 0.1 comparison
     dirnames = [
-        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\sac__73__29_01_16_48_03",
-        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\only_sac__73__31_01_23_09_04",
-        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0\\sacmer__73__02_02_16_19_34"
+        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0"
+        "\\omrl_momentum__73__03_02_13_41_16_momentum_from_0.1",
+        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0"
+        "\\omrl_momentum_mer__73__08_02_09_34_58_momentum_from_0.1_gamma_0.5both_s_50policy_5vae",
+        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0"
+        "\\omrl_momentum_mer__73__09_02_23_32_47_momentum_from_0.1_gamma_0.1policy_0.3vae_s_500policy_12vae",
+        "C:\\Users\\matan\\Documents\\OMRL\\logs\\PointRobotSparse-v0"
+        "\\omrl_momentum_mer__73__12_02_01_31_43_momentum_from_0.1_gamma_0.1both_s_1000policy_25vae",
     ]
     labels = [
         "OMRL",
-        "SAC (Policy only, no VAE)",
-        "SAC+MER (Policy only, no VAE)"
+        "OMRL + MER (1)",
+        "OMRL + MER (2)",
+        "OMRL + MER (3)",
     ]
-    plot_results_from_dirs_together(dirnames, labels)
+
+    plot_results_from_dirs_together(dirnames, labels, is_changing_momentum=True)
