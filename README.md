@@ -1,14 +1,5 @@
 Code is based on the code for the paper: ["Offline Meta Learning of Exploration"](https://arxiv.org/abs/2008.02598) - Ron Dorfman and Aviv Tamar.
-
-```
-@article{dorfman2020offline,
-  title={Offline Meta Reinforcement Learning},
-  author={Dorfman, Ron and Tamar, Aviv},
-  journal={arXiv preprint arXiv:2008.02598},
-  year={2020}
-}
-```
-
+___
 In `metalearner_sac.py` and `metalearner_sac_mer.py` there is the implementation of attempting to perform meta-rl without the VAE.  
 The respective data collection file for these implementations is `online_training_only_sac.py`.  
 In `metalearner_momentum.py` there is the implementation of standard off-polcy VariBAD with the SparsePointEnv environment with sliding ("momentum").  
